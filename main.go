@@ -4,11 +4,19 @@ import (
 	"html-manager/config"
 	"html-manager/handlers"
 	"html-manager/models"
+	"html-manager/templates"
 	"log"
 	"os"
 	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
+)
+
+// 版本信息（构建时注入）
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "unknown"
 )
 
 func main() {
@@ -31,8 +39,12 @@ func main() {
 	// 设置路由
 	router := handlers.SetupRouter(db)
 
-	// 加载 HTML 模板
-	router.LoadHTMLGlob("templates/*.html")
+	// 加载嵌入的 HTML 模板
+	tmpl, err := templates.LoadTemplates()
+	if err != nil {
+		log.Fatal("模板加载失败:", err)
+	}
+	router.SetHTMLTemplate(tmpl)
 
 	// 启动服务器
 	addr := ":" + config.AppConfig.Port

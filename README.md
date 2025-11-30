@@ -188,6 +188,61 @@ go build -o html-manager main.go
 ./html-manager
 ```
 
+## 构建和发布
+
+### 本地构建
+
+项目提供了构建脚本，支持多平台构建：
+
+#### Linux/macOS
+```bash
+chmod +x build.sh
+./build.sh
+```
+
+#### Windows
+```cmd
+build.bat
+```
+
+构建完成后，所有二进制文件和压缩包将在 `dist/` 目录中。
+
+### 自动构建和发布
+
+项目使用 GitHub Actions 进行自动化构建和发布：
+
+1. **触发条件**：
+   - 推送标签（如 `v1.0.0`）时自动构建并发布 Release
+   - 推送到 main/master 分支时运行测试
+
+2. **支持的平台**：
+   - Linux (amd64, arm64)
+   - Windows (amd64)
+   - macOS (amd64, arm64)
+
+3. **发布内容**：
+   - 各平台的二进制文件压缩包
+   - Docker 镜像（多架构支持）
+
+4. **Docker 镜像**：
+   - 镜像名：`html-manager/html-manager`
+   - 标签：版本号和 `latest`
+
+### 版本管理
+
+项目使用语义化版本控制（Semantic Versioning）：
+
+- 主版本号：不兼容的 API 修改
+- 次版本号：向下兼容的功能性新增
+- 修订号：向下兼容的问题修正
+
+发布新版本：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ## 使用说明
 
 ### 1. 上传 HTML 文件
@@ -219,14 +274,14 @@ go build -o html-manager main.go
 
 ## 配置说明
 
-| 环境变量 | 说明 | 默认值 |
-|---------|------|--------|
-| PORT | 服务器端口 | 8080 |
-| GIN_MODE | Gin 运行模式 (debug/release) | debug |
-| SITE_NAME | 网站名称 | HTML Page Manager |
-| AUTHOR_NAME | 作者名称 | Your Name |
-| SUPPORTED_SITES | 支持的站点列表 | github.com,gitea.com,gitlab.com |
-| DB_PATH | 数据库文件路径 | ./data/pages.db |
+| 环境变量        | 说明                         | 默认值                          |
+| --------------- | ---------------------------- | ------------------------------- |
+| PORT            | 服务器端口                   | 8080                            |
+| GIN_MODE        | Gin 运行模式 (debug/release) | debug                           |
+| SITE_NAME       | 网站名称                     | HTML Page Manager               |
+| AUTHOR_NAME     | 作者名称                     | Your Name                       |
+| SUPPORTED_SITES | 支持的站点列表               | github.com,gitea.com,gitlab.com |
+| DB_PATH         | 数据库文件路径               | ./data/pages.db                 |
 
 ## 许可证
 
