@@ -31,7 +31,8 @@ build() {
     
     echo "构建 ${os}/${arch}..."
     
-    GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+    # SQLite需要CGO支持，所以不能设置CGO_ENABLED=0
+    GOOS=${os} GOARCH=${arch} go build \
         -ldflags="${LDFLAGS} -s -w" \
         -o ${OUTPUT_DIR}/html-manager-${os}-${arch}${ext} \
         .

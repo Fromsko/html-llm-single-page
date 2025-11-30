@@ -36,7 +36,8 @@ echo 构建 %os%/%arch%...
 
 set GOOS=%os%
 set GOARCH=%arch%
-set CGO_ENABLED=0
+REM SQLite需要CGO支持，所以不能设置CGO_ENABLED=0
+REM set CGO_ENABLED=0
 go build -ldflags="%LDFLAGS% -s -w" -o %OUTPUT_DIR%/html-manager-%os%-%arch%%ext% .
 
 echo ✓ %os%/%arch% 构建完成
