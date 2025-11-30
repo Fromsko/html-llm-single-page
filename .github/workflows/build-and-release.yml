@@ -73,18 +73,25 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Install CGO dependencies (Linux)
-        if: matrix.goos == 'linux'
+      - name: Install CGO dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y gcc
+          elif [ "${{ matrix.goos }}" = "darwin" ]; then
+            # macOS 通常已经安装了 clang
+            echo "macOS uses clang which should be available"
+          elif [ "${{ matrix.goos }}" = "windows" ]; then
+            # Windows 需要安装 mingw-w64
+            echo "Windows builds may require mingw-w64 for CGO support"
+          fi
 
       - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          # SQLite需要CGO支持，所以不能设置为0
-          # CGO_ENABLED: 0
+          # SQLite需要CGO支持，必须启用CGO
+          CGO_ENABLED: 1
         run: |
           # 设置输出文件名
           if [ "${{ matrix.goos }}" = "windows" ]; then
