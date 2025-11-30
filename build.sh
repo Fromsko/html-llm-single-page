@@ -31,11 +31,21 @@ build() {
     
     echo "构建 ${os}/${arch}..."
     
-    # SQLite需要CGO支持，所以不能设置CGO_ENABLED=0
-    GOOS=${os} GOARCH=${arch} go build \
-        -ldflags="${LDFLAGS} -s -w" \
-        -o ${OUTPUT_DIR}/html-manager-${os}-${arch}${ext} \
-        .
+    # SQLite需要CGO支持，但在交叉编译时需要特殊处理
+    if [ "${os}" = "linux" ]; then
+        # Linux平台启用CGO支持SQLite
+        GOOS=${os} GOARCH=${arch} go build \
+            -ldflags="${LDFLAGS} -s -w" \
+            -o ${OUTPUT_DIR}/html-manager-${os}-${arch}${ext} \
+            .
+    else
+        # 其他平台禁用CGO，使用纯Go的SQLite实现
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+            -tags=sqlite_omit_load_extension \
+            -ldflags="${LDFLAGS} -s -w" \
+            -o ${OUTPUT_DIR}/html-manager-${os}-${arch}${ext} \
+            .
+    fi
     
     echo "✓ ${os}/${arch} 构建完成"
 }

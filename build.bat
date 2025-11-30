@@ -36,9 +36,15 @@ echo 构建 %os%/%arch%...
 
 set GOOS=%os%
 set GOARCH=%arch%
-REM SQLite需要CGO支持，所以不能设置CGO_ENABLED=0
-REM set CGO_ENABLED=0
-go build -ldflags="%LDFLAGS% -s -w" -o %OUTPUT_DIR%/html-manager-%os%-%arch%%ext% .
+REM SQLite需要CGO支持，但在交叉编译时需要特殊处理
+if "%os%" == "linux" (
+    REM Linux平台启用CGO支持SQLite
+    go build -ldflags="%LDFLAGS% -s -w" -o %OUTPUT_DIR%/html-manager-%os%-%arch%%ext% .
+) else (
+    REM 其他平台禁用CGO，使用纯Go的SQLite实现
+    set CGO_ENABLED=0
+    go build -tags=sqlite_omit_load_extension -ldflags="%LDFLAGS% -s -w" -o %OUTPUT_DIR%/html-manager-%os%-%arch%%ext% .
+)
 
 echo ✓ %os%/%arch% 构建完成
 goto :eof

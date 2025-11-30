@@ -79,19 +79,22 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y gcc
           elif [ "${{ matrix.goos }}" = "darwin" ]; then
-            # macOS 通常已经安装了 clang
-            echo "macOS uses clang which should be available"
+            # macOS 交叉编译 - 简化处理，主要依赖 Go 的交叉编译能力
+            echo "Setting up macOS cross-compilation..."
+            sudo apt-get update
+            sudo apt-get install -y clang
           elif [ "${{ matrix.goos }}" = "windows" ]; then
             # Windows 需要安装 mingw-w64
-            echo "Windows builds may require mingw-w64 for CGO support"
+            sudo apt-get update
+            sudo apt-get install -y mingw-w64
           fi
 
       - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          # SQLite需要CGO支持，必须启用CGO
-          CGO_ENABLED: 1
+          # SQLite需要CGO支持，但在交叉编译时需要特殊处理
+          CGO_ENABLED: ${{ matrix.goos == 'linux' && '1' || '0' }}
         run: |
           # 设置输出文件名
           if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -100,8 +103,17 @@ jobs:
             OUTPUT_NAME="html-manager-${{ matrix.goos }}-${{ matrix.goarch }}"
           fi
 
-          # 构建二进制文件（SQLite需要CGO支持）
-          go build -ldflags="-s -w" -o $OUTPUT_NAME .
+          echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }} with CGO_ENABLED=${CGO_ENABLED}"
+
+          # 构建二进制文件
+          # 对于非Linux平台，禁用CGO以避免交叉编译问题
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            # Linux平台启用CGO支持SQLite
+            go build -ldflags="-s -w" -o $OUTPUT_NAME .
+          else
+            # 其他平台禁用CGO，使用纯Go的SQLite实现
+            go build -tags=sqlite_omit_load_extension -ldflags="-s -w" -o $OUTPUT_NAME .
+          fi
 
           # 创建压缩包
           if [ "${{ matrix.goos }}" = "windows" ]; then
