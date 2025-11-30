@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.SiteName}}</title>
+
+    <!-- CSS Framework -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Monaco Editor -->
+    <script src="https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js"></script>
+
+    <!-- Custom Styles -->
+    <style>
+      :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --secondary: #8b5cf6;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --dark: #1f2937;
+        --light: #f9fafb;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+
+      .glass-morphism {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .gradient-bg {
+        background: linear-gradient(
+          135deg,
+          var(--primary) 0%,
+          var(--secondary) 100%
+        );
+      }
+
+      .btn {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateY(0);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      .card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+
+      .drop-zone {
+        border: 2px dashed #cbd5e0;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .drop-zone.drag-over {
+        border-color: var(--primary);
+        background: rgba(99, 102, 241, 0.1);
+        transform: scale(1.02);
+      }
+
+      .editor-container {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+
+      .modal-backdrop.show {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+        max-width: 95vw;
+        width: 1200px;
+        max-height: 90vh;
+        overflow: hidden;
+      }
+
+      @media (max-width: 1280px) {
+        .modal-content {
+          width: 95vw;
+          max-width: 1000px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .modal-content {
+          width: 98vw;
+          max-width: none;
+          margin: 10px;
+        }
+
+        #editMonacoEditor {
+          height: 400px !important;
+        }
+      }
+
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          #f3f4f6 25%,
+          #e5e7eb 50%,
+          #f3f4f6 75%
+        );
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+      }
+
+      @keyframes loading {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      .stats-card {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.1) 0%,
+          rgba(255, 255, 255, 0.05) 100%
+        );
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+      <div class="container mx-auto px-6 py-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold mb-2">{{.SiteName}}</h1>
+            <p class="text-purple-100">AI 时代单页面 HTML 管理系统</p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm text-purple-100">作者: {{.Author}}</p>
+            <p class="text-xs text-purple-200" id="currentTime"></p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+      <!-- Stats Cards -->
+      <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="stats-card rounded-xl p-6 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm">总页面数</p>
+              <p class="text-2xl font-bold" id="totalPages">0</p>
+            </div>
+            <i class="fas fa-file-alt text-3xl text-purple-200"></i>
+          </div>
+        </div>
+        <div class="stats-card rounded-xl p-6 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm">今日创建</p>
+              <p class="text-2xl font-bold" id="todayPages">0</p>
+            </div>
+            <i class="fas fa-calendar-day text-3xl text-purple-200"></i>
+          </div>
+        </div>
+        <div class="stats-card rounded-xl p-6 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm">存储大小</p>
+              <p class="text-2xl font-bold" id="storageSize">0 KB</p>
+            </div>
+            <i class="fas fa-database text-3xl text-purple-200"></i>
+          </div>
+        </div>
+        <div class="stats-card rounded-xl p-6 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm">活跃站点</p>
+              <p class="text-2xl font-bold">{{.Author}}</p>
+            </div>
+            <i class="fas fa-globe text-3xl text-purple-200"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- Action Cards -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- Upload Card -->
+        <div class="glass-morphism rounded-2xl p-8 card">
+          <div class="flex items-center mb-6">
+            <div
+              class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white mr-4"
+            >
+              <i class="fas fa-upload"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800">上传文件</h2>
+              <p class="text-gray-600">支持拖拽上传 HTML 文件</p>
+            </div>
+          </div>
+
+          <div
+            id="dropZone"
+            class="drop-zone p-12 rounded-xl text-center cursor-pointer hover:bg-opacity-70"
+          >
+            <i
+              class="fas fa-cloud-upload-alt text-6xl text-purple-400 mb-4"
+            ></i>
+            <p class="text-lg font-semibold text-gray-700 mb-2">
+              拖拽文件到这里
+            </p>
+            <p class="text-sm text-gray-500 mb-4">或者点击选择文件</p>
+            <button
+              class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all"
+            >
+              <i class="fas fa-folder-open mr-2"></i>选择文件
+            </button>
+            <input type="file" id="fileInput" accept=".html" class="hidden" />
+          </div>
+        </div>
+
+        <!-- Create Card -->
+        <div class="glass-morphism rounded-2xl p-8 card">
+          <div class="flex items-center mb-6">
+            <div
+              class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white mr-4"
+            >
+              <i class="fas fa-plus-circle"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800">创建页面</h2>
+              <p class="text-gray-600">使用在线编辑器创建新页面</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >页面标题</label
+              >
+              <input
+                type="text"
+                id="pageTitle"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                placeholder="输入页面标题..."
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >页面描述</label
+              >
+              <input
+                type="text"
+                id="pageDescription"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                placeholder="输入页面描述..."
+              />
+            </div>
+            <div class="flex gap-4">
+              <button
+                id="createPage"
+                class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all"
+              >
+                <i class="fas fa-plus mr-2"></i>创建页面
+              </button>
+              <button
+                id="previewPage"
+                class="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all"
+              >
+                <i class="fas fa-eye mr-2"></i>预览页面
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Editor Section -->
+      <section class="glass-morphism rounded-2xl p-8 mb-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center">
+            <div
+              class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-white mr-3"
+            >
+              <i class="fas fa-code"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800">HTML 编辑器</h2>
+          </div>
+          <div class="flex gap-2">
+            <button
+              id="formatCode"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-all"
+            >
+              <i class="fas fa-indent mr-2"></i>格式化
+            </button>
+            <button
+              id="clearEditor"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-all"
+            >
+              <i class="fas fa-eraser mr-2"></i>清空
+            </button>
+          </div>
+        </div>
+        <div
+          id="monacoEditor"
+          class="editor-container"
+          style="height: 400px"
+        ></div>
+      </section>
+
+      <!-- Pages List -->
+      <section class="glass-morphism rounded-2xl p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center">
+            <div
+              class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white mr-3"
+            >
+              <i class="fas fa-list"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800">页面列表</h2>
+          </div>
+          <div class="flex items-center gap-4">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="搜索页面..."
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            <button
+              id="refreshPages"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-all"
+            >
+              <i class="fas fa-sync-alt mr-2"></i>刷新
+            </button>
+          </div>
+        </div>
+        <div id="pagesList" class="space-y-4">
+          <!-- Pages will be loaded here -->
+          <div class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-400 mb-4"></i>
+            <p class="text-gray-600">正在加载页面...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal-backdrop">
+      <div class="modal-content">
+        <div
+          class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-t-2xl"
+        >
+          <div class="flex items-center justify-between">
+            <h3 class="text-2xl font-bold">编辑页面</h3>
+            <button
+              id="closeModal"
+              class="text-white hover:text-purple-200 transition-colors"
+            >
+              <i class="fas fa-times text-2xl"></i>
+            </button>
+          </div>
+        </div>
+        <div class="p-6" style="max-height: 80vh; overflow-y: auto">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >页面标题</label
+              >
+              <input
+                type="text"
+                id="editTitle"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >页面描述</label
+              >
+              <input
+                type="text"
+                id="editDescription"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >HTML 内容</label
+              >
+              <div
+                id="editMonacoEditor"
+                class="editor-container"
+                style="height: 500px"
+              ></div>
+            </div>
+            <div class="flex gap-4">
+              <button
+                id="cancelEdit"
+                class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg transition-all"
+              >
+                <i class="fas fa-times mr-2"></i>取消
+              </button>
+              <button
+                id="saveEdit"
+                class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all"
+              >
+                <i class="fas fa-save mr-2"></i>保存更改
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global variables
+      let editor, editEditor;
+      let currentEditingPageId = null;
+      let pagesData = [];
+
+      // Toast notification system
+      function showToast(message, type = "info") {
+        const toastContainer = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+
+        const icons = {
+          success: "fa-check-circle",
+          error: "fa-exclamation-circle",
+          warning: "fa-exclamation-triangle",
+          info: "fa-info-circle",
+        };
+
+        const colors = {
+          success: "bg-green-500",
+          error: "bg-red-500",
+          warning: "bg-yellow-500",
+          info: "bg-blue-500",
+        };
+
+        toast.className = `toast ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3`;
+        toast.innerHTML = `
+                <i class="fas ${icons[type]} text-xl"></i>
+                <span>${message}</span>
+            `;
+
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.animation = "slideOut 0.3s ease-in forwards";
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
+
+      // Update current time
+      function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleString("zh-CN", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        document.getElementById("currentTime").textContent = timeString;
+      }
+
+      setInterval(updateTime, 1000);
+      updateTime();
+
+      // Initialize Monaco Editor
+      require.config({
+        paths: { vs: "https://unpkg.com/monaco-editor@0.44.0/min/vs" },
+      });
+      require(["vs/editor/editor.main"], function () {
+        // Main editor
+        editor = monaco.editor.create(document.getElementById("monacoEditor"), {
+          value: `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .highlight {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hello World! 🌟</h1>
+        <p>欢迎来到 AI 时代的单页面管理系统！</p>
+        <div class="highlight">
+            <p>这是一个现代化的 HTML 页面模板，采用了渐变背景和毛玻璃效果。</p>
+        </div>
+        <p>您可以自由编辑这个页面，添加您的创意内容。</p>
+    </div>
+</body>
+</html>`,
+          language: "html",
+          theme: "vs-dark",
+          automaticLayout: true,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          fontSize: 14,
+          wordWrap: "on",
+        });
+
+        // Edit modal editor
+        editEditor = monaco.editor.create(
+          document.getElementById("editMonacoEditor"),
+          {
+            value: "",
+            language: "html",
+            theme: "vs-dark",
+            automaticLayout: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            fontSize: 14,
+            wordWrap: "on",
+          }
+        );
+      });
+
+      // API functions
+      async function apiRequest(url, options = {}) {
+        try {
+          const response = await fetch(url, {
+            headers: {
+              "Content-Type": "application/json",
+              ...options.headers,
+            },
+            ...options,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          return await response.json();
+        } catch (error) {
+          console.error("API request failed:", error);
+          throw error;
+        }
+      }
+
+      // Load pages
+      async function loadPages() {
+        const pagesList = document.getElementById("pagesList");
+
+        try {
+          const data = await apiRequest("/api/pages");
+          pagesData = data.data || [];
+          renderPages(pagesData);
+          updateStats();
+        } catch (error) {
+          pagesList.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
+                        <p class="text-gray-600">加载页面失败</p>
+                        <button onclick="loadPages()" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-retry mr-2"></i>重试
+                        </button>
+                    </div>
+                `;
+        }
+      }
+
+      // Render pages
+      function renderPages(pages) {
+        const pagesList = document.getElementById("pagesList");
+
+        if (pages.length === 0) {
+          pagesList.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-inbox text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-600">暂无页面</p>
+                        <p class="text-sm text-gray-500 mt-2">创建您的第一个页面吧！</p>
+                    </div>
+                `;
+          return;
+        }
+
+        pagesList.innerHTML = pages
+          .map(
+            (page) => `
+                <div class="bg-white rounded-xl p-6 card border border-gray-200">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <h3 class="text-xl font-semibold text-gray-800 mr-3">${
+                                  page.title
+                                }</h3>
+                                <span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full">ID: ${
+                                  page.id
+                                }</span>
+                            </div>
+                            <p class="text-gray-600 mb-4">${
+                              page.description || "无描述"
+                            }</p>
+                            <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                <span><i class="fas fa-user mr-1"></i>${
+                                  page.author
+                                }</span>
+                                <span><i class="fas fa-clock mr-1"></i>${new Date(
+                                  page.created_at
+                                ).toLocaleDateString("zh-CN")}</span>
+                                <span><i class="fas fa-link mr-1"></i>/page/${
+                                  page.slug
+                                }</span>
+                            </div>
+                            <div class="flex items-center gap-3 mt-4">
+                                <a href="/page/${
+                                  page.slug
+                                }" target="_blank" class="inline-flex items-center text-blue-500 hover:text-blue-700 transition-colors">
+                                    <i class="fas fa-external-link-alt mr-1"></i>查看
+                                </a>
+                                <a href="/api/download/${
+                                  page.id
+                                }" class="inline-flex items-center text-green-500 hover:text-green-700 transition-colors">
+                                    <i class="fas fa-download mr-1"></i>下载
+                                </a>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 ml-4">
+                            <button onclick="editPage(${
+                              page.id
+                            })" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-all">
+                                <i class="fas fa-edit mr-1"></i>编辑
+                            </button>
+                            <button onclick="deletePage(${page.id}, '${
+              page.title
+            }')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all">
+                                <i class="fas fa-trash mr-1"></i>删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      // Update statistics
+      function updateStats() {
+        const totalPages = pagesData.length;
+        const todayPages = pagesData.filter((page) => {
+          const pageDate = new Date(page.created_at).toDateString();
+          const today = new Date().toDateString();
+          return pageDate === today;
+        }).length;
+
+        // 计算存储大小
+        let totalSize = 0;
+        pagesData.forEach((page) => {
+          if (page.content) {
+            // 计算字符大小（UTF-8 字符）
+            totalSize += new Blob([page.content]).size;
+          }
+        });
+
+        // 格式化存储大小
+        let formattedSize = "0 B";
+        if (totalSize > 0) {
+          const units = ["B", "KB", "MB", "GB"];
+          let size = totalSize;
+          let unitIndex = 0;
+
+          while (size >= 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex++;
+          }
+
+          formattedSize = size.toFixed(2) + " " + units[unitIndex];
+        }
+
+        document.getElementById("totalPages").textContent = totalPages;
+        document.getElementById("todayPages").textContent = todayPages;
+        document.getElementById("storageSize").textContent = formattedSize;
+      }
+
+      // File upload handling
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("fileInput");
+
+      dropZone.addEventListener("click", () => fileInput.click());
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("drag-over");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          uploadFile(files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          uploadFile(e.target.files[0]);
+        }
+      });
+
+      async function uploadFile(file) {
+        if (!file.name.endsWith(".html")) {
+          showToast("只支持 HTML 文件！", "error");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (response.ok) {
+            showToast("文件上传成功！", "success");
+            loadPages();
+          } else {
+            showToast("上传失败！", "error");
+          }
+        } catch (error) {
+          console.error("Upload error:", error);
+          showToast("上传错误！", "error");
+        }
+      }
+
+      // Create new page
+      document
+        .getElementById("createPage")
+        .addEventListener("click", async () => {
+          const title = document.getElementById("pageTitle").value.trim();
+          const description = document
+            .getElementById("pageDescription")
+            .value.trim();
+          const content = editor.getValue();
+
+          if (!title) {
+            showToast("请输入页面标题！", "warning");
+            return;
+          }
+
+          try {
+            const result = await apiRequest("/api/pages", {
+              method: "POST",
+              body: JSON.stringify({ title, description, content }),
+            });
+
+            showToast("页面创建成功！", "success");
+            document.getElementById("pageTitle").value = "";
+            document.getElementById("pageDescription").value = "";
+            loadPages();
+          } catch (error) {
+            showToast("创建失败！", "error");
+          }
+        });
+
+      // Preview page
+      document.getElementById("previewPage").addEventListener("click", () => {
+        const content = editor.getValue();
+        const previewWindow = window.open("", "_blank");
+        previewWindow.document.write(content);
+        previewWindow.document.close();
+      });
+
+      // Format code
+      document.getElementById("formatCode").addEventListener("click", () => {
+        editor.getAction("editor.action.formatDocument").run();
+        showToast("代码已格式化", "info");
+      });
+
+      // Clear editor
+      document.getElementById("clearEditor").addEventListener("click", () => {
+        if (confirm("确定要清空编辑器内容吗？")) {
+          editor.setValue(
+            "<!DOCTYPE html>\n<html>\n<head>\n    <title>新页面</title>\n</head>\n<body>\n    <h1>Hello World!</h1>\n</body>\n</html>"
+          );
+          showToast("编辑器已清空", "info");
+        }
+      });
+
+      // Search pages
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredPages = pagesData.filter(
+          (page) =>
+            page.title.toLowerCase().includes(searchTerm) ||
+            page.description?.toLowerCase().includes(searchTerm) ||
+            page.slug.toLowerCase().includes(searchTerm)
+        );
+        renderPages(filteredPages);
+      });
+
+      // Refresh pages
+      document.getElementById("refreshPages").addEventListener("click", () => {
+        loadPages();
+        showToast("页面列表已刷新", "info");
+      });
+
+      // Modal handling
+      function showModal() {
+        const modal = document.getElementById("editModal");
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+      }
+
+      function hideModal() {
+        const modal = document.getElementById("editModal");
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+        currentEditingPageId = null;
+      }
+
+      document
+        .getElementById("closeModal")
+        .addEventListener("click", hideModal);
+      document
+        .getElementById("cancelEdit")
+        .addEventListener("click", hideModal);
+
+      // Edit page
+      async function editPage(id) {
+        try {
+          const data = await apiRequest(`/api/pages/${id}`);
+
+          currentEditingPageId = id;
+          document.getElementById("editTitle").value = data.data.title;
+          document.getElementById("editDescription").value =
+            data.data.description || "";
+          editEditor.setValue(data.data.content || "");
+
+          showModal();
+        } catch (error) {
+          showToast("加载页面数据失败，请稍后重试", "error");
+        }
+      }
+
+      // Save edit
+      document
+        .getElementById("saveEdit")
+        .addEventListener("click", async () => {
+          const title = document.getElementById("editTitle").value.trim();
+          const description = document
+            .getElementById("editDescription")
+            .value.trim();
+          const content = editEditor.getValue();
+
+          if (!title) {
+            showToast("请输入页面标题！", "warning");
+            return;
+          }
+
+          try {
+            await apiRequest(`/api/pages/${currentEditingPageId}`, {
+              method: "PUT",
+              body: JSON.stringify({ title, description, content }),
+            });
+
+            showToast("页面更新成功！", "success");
+            hideModal();
+            loadPages();
+          } catch (error) {
+            showToast("更新失败！", "error");
+          }
+        });
+
+      // Delete page
+      async function deletePage(id, title) {
+        if (confirm(`确定要删除页面 "${title}" 吗？此操作不可恢复。`)) {
+          try {
+            await apiRequest(`/api/pages/${id}`, { method: "DELETE" });
+            showToast("页面删除成功！", "success");
+            loadPages();
+          } catch (error) {
+            showToast("删除失败！", "error");
+          }
+        }
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", () => {
+        loadPages();
+      });
+    </script>
+  </body>
+</html>
