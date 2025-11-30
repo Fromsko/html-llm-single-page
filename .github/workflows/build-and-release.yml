@@ -182,9 +182,34 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          # 先只构建 amd64 版本，避免 ARM64 构建卡住
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # 优化构建性能
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          # 设置构建超时
+          timeout: 600
+          # 并行构建优化
+          provenance: false
+          sbom: false
+
+      # 可选：单独构建 ARM64 版本（如果 amd64 成功的话）
+      - name: Build ARM64 Docker image (optional)
+        if: success()
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          timeout: 1200  # ARM64 构建时间加倍
+          provenance: false
+          sbom: false
